@@ -200,101 +200,103 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
                         //waiting
                     }
                     break;
+            }
 
 
-                switch (liftState) {
-                    case LIFT_START:
-                        if (aPressed) {
-                            elevatorHeightNeeded = elevatorLow;
-                            liftState = LiftState.LIFT_EXTEND;
+            switch (liftState) {
+                case LIFT_START:
+                    if (aPressed) {
+                        elevatorHeightNeeded = elevatorLow;
+                        liftState = LiftState.LIFT_EXTEND;
 
-                        } else if (bPressed) {
-                            elevatorHeightNeeded = elevatorMed;
-                            liftState = LiftState.LIFT_EXTEND;
+                    } else if (bPressed) {
+                        elevatorHeightNeeded = elevatorMed;
+                        liftState = LiftState.LIFT_EXTEND;
 
-                        } else if (yPressed) {
-                            elevatorHeightNeeded = elevatorHigh;
-                            liftState = LiftState.LIFT_EXTEND;
+                    } else if (yPressed) {
+                        elevatorHeightNeeded = elevatorHigh;
+                        liftState = LiftState.LIFT_EXTEND;
 
-                        } else if (xPressed) {
-                            elevatorHeightNeeded = elevatorGround;
-                            liftState = LiftState.LIFT_EXTEND;
-                        }
+                    } else if (xPressed) {
+                        elevatorHeightNeeded = elevatorGround;
+                        liftState = LiftState.LIFT_EXTEND;
+                    }
 
-                        //Need to do this for all heights
-                        if (liftState == LiftState.LIFT_EXTEND) {
-                            robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
-                        }
-                        break;
+                    //Need to do this for all heights
+                    if (liftState == LiftState.LIFT_EXTEND) {
+                        robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                    }
+                    break;
 
-                    case LIFT_EXTEND:
-                        // check if the lift has finished extending,
-                        if (Math.abs(robot.elevator.getCurrentHeight() - elevatorHeightNeeded) < 10) {
-                            // our threshold is within
-                            // 10 encoder ticks of our target.
-                            robot.elevator.stopElevator();
-                            robot.elevator.resetElevator(); //reset the PID controller
-                            liftTimer.reset();
-                            elevatorHeightNeeded = -1;
+                case LIFT_EXTEND:
+                    // check if the lift has finished extending,
+                    if (Math.abs(robot.elevator.getCurrentHeight() - elevatorHeightNeeded) < 10) {
+                        // our threshold is within
+                        // 10 encoder ticks of our target.
+                        robot.elevator.stopElevator();
+                        robot.elevator.resetElevator(); //reset the PID controller
+                        liftTimer.reset();
+                        elevatorHeightNeeded = -1;
 
-                            // set the lift dump to dump
-                            //Drop cargo
+                        // set the lift dump to dump
+                        //Drop cargo
 
 
-                            liftState = LiftState.LIFT_DUMP;
-                        } else {//Keep moving the elevator to desired height
-                            robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
-                        }
-                        break;
+                        liftState = LiftState.LIFT_DUMP;
+                    } else {//Keep moving the elevator to desired height
+                        robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                    }
+                    break;
 
-                    case LIFT_DUMP:
-                        robot.claw.openClaw();//Dump the cone
+                case LIFT_DUMP:
+                    robot.claw.openClaw();//Dump the cone
 
-                        if (liftTimer.seconds() >= DUMP_TIME) {
-                            // The robot waited long enough, time to start
-                            // retracting the lift
-                            elevatorHeightNeeded = elevatorGround;
-                            robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
-                            liftState = LiftState.LIFT_RETRACT;
-                        }
-                        break;
+                    if (liftTimer.seconds() >= DUMP_TIME) {
+                        // The robot waited long enough, time to start
+                        // retracting the lift
+                        elevatorHeightNeeded = elevatorGround;
+                        robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                        liftState = LiftState.LIFT_RETRACT;
+                    }
+                    break;
 
-                    case LIFT_RETRACT:
-                        if (Math.abs(robot.elevator.getCurrentHeightToAchieve() - elevatorHeightNeeded) < 10) {
-                            robot.elevator.stopElevator();
-                            robot.elevator.resetElevator(); //reset the PID controller
-                            liftTimer.reset();
-                            elevatorHeightNeeded = -1;
+                case LIFT_RETRACT:
+                    if (Math.abs(robot.elevator.getCurrentHeightToAchieve() - elevatorHeightNeeded) < 10) {
+                        robot.elevator.stopElevator();
+                        robot.elevator.resetElevator(); //reset the PID controller
+                        liftTimer.reset();
+                        elevatorHeightNeeded = -1;
 
-                            liftState = LiftState.LIFT_START;
-                        } else {
-                            robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
-                        }
-                        break;
-                    default:
-                        // should never be reached, as liftState should never be null
                         liftState = LiftState.LIFT_START;
-                }
-            }
-
-            robotHeading = robot.getHeading() + initialHeading;
-            moveAngle = atan2(-gamepad2.left_stick_x, -gamepad2.left_stick_y) - robotHeading;
-            moveMagnitude = abs(pow(gamepad2.left_stick_x, 3)) + abs(pow(gamepad2.left_stick_y, 3));
-            if (moveMagnitude < 0.01) {
-                moveMagnitude = 0;
-            }
-            turn = pow(gamepad2.right_stick_x, 3);
-
-            if (gamepad2.right_trigger < 0.1) {
-                robot.setDrivePowers(moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn,
-                        moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn,
-                        moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn,
-                        moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn);
-            } else {
-                robot.setDrivePowers((moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn) / 4,
-                        (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn) / 4,
-                        (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn) / 4,
-                        (moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn) / 4);
+                    } else {
+                        robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                    }
+                    break;
+                default:
+                    // should never be reached, as liftState should never be null
+                    liftState = LiftState.LIFT_START;
             }
         }
+
+        robotHeading = robot.getHeading() + initialHeading;
+        moveAngle = atan2(-gamepad2.left_stick_x, -gamepad2.left_stick_y) - robotHeading;
+        moveMagnitude = abs(pow(gamepad2.left_stick_x, 3)) + abs(pow(gamepad2.left_stick_y, 3));
+        if (moveMagnitude < 0.01) {
+            moveMagnitude = 0;
+        }
+        turn = pow(gamepad2.right_stick_x, 3);
+
+        if (gamepad2.right_trigger < 0.1) {
+            robot.setDrivePowers(moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn,
+                    moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn,
+                    moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn,
+                    moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn);
+        } else {
+            robot.setDrivePowers((moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn) / 4,
+                    (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn) / 4,
+                    (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn) / 4,
+                    (moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn) / 4);
+        }
     }
+}
+
