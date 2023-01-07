@@ -14,11 +14,13 @@ import static java.lang.Math.cos;
 import static java.lang.Math.pow;
 import static java.lang.Math.sin;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.classes.ValueStorage;
 import org.firstinspires.ftc.teamcode.robot.GearheadsRobot;
@@ -27,6 +29,9 @@ import org.firstinspires.ftc.teamcode.robot.GearheadsRobot;
 @TeleOp(name = "TeleOpRedBlueTwoDriver")
 public class TeleOpRedBlueTwoDriver extends LinearOpMode {
     GearheadsRobot robot = new GearheadsRobot();
+    FtcDashboard dashboard = FtcDashboard.getInstance();
+    Telemetry dashboardTelemetry = dashboard.getTelemetry();
+    StringBuffer stateMachineTelemetry = new StringBuffer();
 
     int holderDetectionCount = 0;
     double initialHeading = ValueStorage.lastPose.getHeading() - side * PI / 2;
@@ -179,6 +184,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
                         (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn) / 4,
                         (moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn) / 4);
             }
+            updateTelemetry();
         }
     }
 
@@ -219,6 +225,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
                 if (robot.claw.isClawClosed()) {
 
                     coneAvailable = true;
+                    //TODO: this button press could be eliminated and the arm can be moved automatically
                     if (rbPressed) {
                         robot.arm.moveArmToPosition(ValueStorage.armInitPosition);
                         armState = ArmClawState.ARM_INIT_CLAW_CLOSED;
@@ -248,7 +255,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
     /**
      * By pressing a,b,x & y the elevator moves to different height states
      * By pressing left bumper the cone is dropped
-     * @param liftStateVal
+     * @param liftStateVal the lift state
      */
     private void executeElevatorStateMachine(LiftState liftStateVal) {
         if(armState != ArmClawState.ARM_INIT_CLAW_CLOSED && !coneAvailable){
@@ -302,7 +309,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
                     robot.elevator.moveElevatorToHeight(elevatorGround);
                     liftTimer.reset();
 
-                    armState = ArmClawState.ARM_INIT_CLAW_OPEN;
+                    //armState = ArmClawState.ARM_INIT_CLAW_OPEN;
                     liftState = LiftState.LIFT_RETRACT;
                 }
                 break;
@@ -324,6 +331,17 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
                 // should never be reached, as liftState should never be null
                 liftState = LiftState.LIFT_INIT;
         }
+    }
+
+
+    private void updateTelemetry(){
+        String currState = " State > " + liftState.name() + " | " + armState.name() +"\n";
+        stateMachineTelemetry.append(currState);
+        stateMachineTelemetry.trimToSize();
+
+        dashboardTelemetry.addData("Curr State", currState);
+        dashboardTelemetry.addData("All States", stateMachineTelemetry.toString());
+        dashboardTelemetry.update();
     }
 }
 
