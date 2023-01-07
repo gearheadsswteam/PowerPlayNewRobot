@@ -33,9 +33,8 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
     double moveAngle;
     double moveMagnitude;
     double turn;
-    double stateTime = 0;
     double time;
-    boolean stateDir = true;
+
     boolean aPressed = false;
     boolean bPressed = false;
     boolean aReleased = true;
@@ -58,17 +57,17 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
     final double DUMP_TIME = 500;
 
     public enum LiftState {
-        LIFT_START,
+        LIFT_INIT,
         LIFT_EXTEND,
         LIFT_DUMP,
         LIFT_RETRACT
     }
 
     public enum ArmClawState {
-        ARM_DROP_CLAW_OPEN,
+        ARM_INIT_CLAW_OPEN,
         ARM_GRAB_CLAW_OPEN,
         ARM_GRAB_CLAW_CLOSED,
-        ARM_DROP_CLAW_CLOSED
+        ARM_INIT_CLAW_CLOSED
     }
 
     private int elevatorHeightNeeded = -1;
@@ -77,19 +76,30 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
 
     // The liftState variable is declared out here
     // so its value persists between loop() calls
-    LiftState liftState = LiftState.LIFT_START;
+    LiftState liftState = LiftState.LIFT_INIT;
 
     //Arm State
-    ArmClawState armState = ArmClawState.ARM_DROP_CLAW_OPEN;
+    ArmClawState armState = ArmClawState.ARM_INIT_CLAW_OPEN;
 
     // used with the dump servo, this will get covered in a bit
     ElapsedTime liftTimer = new ElapsedTime();
+    ElapsedTime clawTimer = new ElapsedTime();
 
     public void initialize() {
         // hardware initilization code
         robot.init(hardwareMap);
         robot.retract.setPosition(odoUp);
         liftTimer.reset();
+
+        //Move elevator to ground position
+        while(robot.elevator.isElevatorAtInitPosition()) {
+            robot.elevator.moveElevatorToHeight(elevatorGround);
+        }
+
+        //Move arm & claw to Init/open position
+        robot.arm.moveArmToInitPosition();
+        robot.claw.openClaw();
+        armState = ArmClawState.ARM_INIT_CLAW_OPEN;
     }
 
 
@@ -154,6 +164,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
 
             time = clock.seconds();
 
+            //execute arm claw state machine
             executeArmStateMachine(armState);
 
             robotHeading = robot.getHeading() + initialHeading;
@@ -185,7 +196,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
      */
     private void executeArmStateMachine(ArmClawState armClawStateVal){
         switch (armClawStateVal) {
-            case ARM_DROP_CLAW_OPEN:
+            case ARM_INIT_CLAW_OPEN:
                 if (rbPressed) {
                     armPositonNeeded = ValueStorage.armGrabPositon;
 
@@ -196,7 +207,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
                 break;
 
             case ARM_GRAB_CLAW_OPEN:
-                // check if the lift has finished extending,
+                // check if arm has moved to grab position
                 if (Math.abs(robot.arm.getCurrentPosition() - armPositonNeeded) < 0.1) {
                     // our threshold is within
                     armPositonNeeded = -1;
@@ -212,25 +223,27 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
 
 
             case ARM_GRAB_CLAW_CLOSED:
-                // check if the lift has finished extending,
-                if (Math.abs(robot.claw.getCurrentPosition() - clawPositonNeeded) < 0.1) {
+                // check if the claw is closed
+                if (robot.claw.isClawClosed()) {
                     // our threshold is within
+                    coneAvailable = true;
                     clawPositonNeeded = -1;
                     if (rbPressed) {
-                        armPositonNeeded = ValueStorage.armDropPosition;
+                        armPositonNeeded = ValueStorage.armInitPosition;
                         robot.arm.moveArmToPosition(armPositonNeeded);
-                        armState = ArmClawState.ARM_DROP_CLAW_CLOSED;
+                        armState = ArmClawState.ARM_INIT_CLAW_CLOSED;
                     }
-                    coneAvailable = true;
-                } else {//wait till arm has reached the position
+
+                } else {//wait till claw has closed
                     //waiting
+                    coneAvailable = false;
                 }
                 break;
 
 
-            case ARM_DROP_CLAW_CLOSED:
-                // check if the lift has finished extending,
-                if (Math.abs(robot.claw.getCurrentPosition() - clawPositonNeeded) < 0.1) {
+            case ARM_INIT_CLAW_CLOSED:
+                // check if the claw has finished
+                if (robot.claw.isClawClosed()) {
                     //Wait for Elevator command
                     executeElevatorStateMachine(liftState);
                 } else {//wait till arm has reached the position
@@ -248,13 +261,13 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
      * @param liftStateVal
      */
     private void executeElevatorStateMachine(LiftState liftStateVal) {
-        if(armState != ArmClawState.ARM_DROP_CLAW_CLOSED && !coneAvailable){
+        if(armState != ArmClawState.ARM_INIT_CLAW_CLOSED && !coneAvailable){
             //Error we are in wrong state
             return;
         }
 
         switch (liftStateVal) {
-            case LIFT_START:
+            case LIFT_INIT:
                 if (aPressed) {
                     elevatorHeightNeeded = elevatorLow;
                     liftState = LiftState.LIFT_EXTEND;
@@ -288,9 +301,6 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
                     liftTimer.reset();
                     elevatorHeightNeeded = -1;
 
-                    // set the lift dump to dump
-                    //Drop cargo
-
 
                     liftState = LiftState.LIFT_DUMP;
                 } else {//Keep moving the elevator to desired height
@@ -301,7 +311,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
             case LIFT_DUMP:
                 if(lbPressed) {
                     robot.claw.openClaw();//Dump the cone
-                    armState = ArmClawState.ARM_DROP_CLAW_OPEN;
+                    armState = ArmClawState.ARM_INIT_CLAW_OPEN;
                     coneAvailable = false;
                 }
 
@@ -312,7 +322,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
                     robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
                     liftTimer.reset();
 
-                    armState = ArmClawState.ARM_DROP_CLAW_OPEN;
+                    armState = ArmClawState.ARM_INIT_CLAW_OPEN;
                     liftState = LiftState.LIFT_RETRACT;
                 }
                 break;
@@ -324,15 +334,16 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
                     liftTimer.reset();
                     elevatorHeightNeeded = -1;
 
-                    armState = ArmClawState.ARM_DROP_CLAW_OPEN;
-                    liftState = LiftState.LIFT_START;
+                    armState = ArmClawState.ARM_INIT_CLAW_OPEN;
+                    liftState = LiftState.LIFT_INIT;
                 } else {
                     robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
                 }
+                coneAvailable = false;
                 break;
             default:
                 // should never be reached, as liftState should never be null
-                liftState = LiftState.LIFT_START;
+                liftState = LiftState.LIFT_INIT;
         }
     }
 }
