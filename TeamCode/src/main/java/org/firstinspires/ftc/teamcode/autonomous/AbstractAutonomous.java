@@ -4,10 +4,10 @@ import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import org.firstinspires.ftc.teamcode.classes.Robot;
-import org.firstinspires.ftc.teamcode.classes.SignalDetector;
+import org.firstinspires.ftc.teamcode.robot.GearheadsRobot;
+import org.firstinspires.ftc.teamcode.vision.SignalDetector;
 public abstract class AbstractAutonomous extends LinearOpMode {
-    public Robot robot = new Robot();
+    public GearheadsRobot robot = new GearheadsRobot();
     SignalDetector detector;
     int runCase = 2;
     int caseDetected = 2;
@@ -16,10 +16,8 @@ public abstract class AbstractAutonomous extends LinearOpMode {
     double time;
     @Override
     public void runOpMode() {
-        robot.init(hardwareMap, armIn, wristIn);
-        robot.gripper.setPosition(gripperHold);
+        robot.init(hardwareMap);
         robot.retract.setPosition(odoDown);
-        robot.roller.setPosition(rollerRetract);
         detector = new SignalDetector(hardwareMap);
         detector.init();
         robot.drive.setPoseEstimate(initPose());

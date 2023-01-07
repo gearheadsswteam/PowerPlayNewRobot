@@ -109,4 +109,8 @@ public class TrapezoidalProfile extends MotionProfile {
     public TrapezoidalProfile extendTrapezoidal(double xFinal, double vFinal) {
         return new TrapezoidalProfile(vm, am, tf, xf, vf, xFinal, vFinal);
     }
+
+    public double getFinalX(){
+        return xf;
+    }
 }
