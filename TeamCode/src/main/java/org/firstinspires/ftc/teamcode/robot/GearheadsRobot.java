@@ -21,14 +21,15 @@ import java.util.List;
 public class GearheadsRobot {
 
     public SampleMecanumDrive drive;
+    public Elevator elevator;
+    public Arm arm;
+    public Claw claw;
 
     public DcMotorEx fl;
     public DcMotorEx fr;
     public DcMotorEx bl;
     public DcMotorEx br;
 
-    public DcMotorEx liftL;
-    public DcMotorEx liftR;
 
     public Servo retract;
 
@@ -37,23 +38,9 @@ public class GearheadsRobot {
 
     List<LynxModule> allHubs;
 
-    PidfController liftPidf = new PidfController(liftKp, liftKi, liftKd) {
-        @Override
-        public double kf(double input) {
-            return liftKf (input);
-        }
-    };
-    public TrapezoidalProfile liftProfile = new TrapezoidalProfile(liftMaxVel, liftMaxAccel, 0, 0, 0, 0, 0);
 
     public void init(HardwareMap hwMap) {
         drive = new SampleMecanumDrive(hwMap);
-        fl = hwMap.get(DcMotorEx.class, "fl");
-        fr = hwMap.get(DcMotorEx.class, "fr");
-        bl = hwMap.get(DcMotorEx.class, "bl");
-        br = hwMap.get(DcMotorEx.class, "br");
-
-        liftL = hwMap.get(DcMotorEx.class, "liftL");
-        liftR = hwMap.get(DcMotorEx.class, "liftR");
 
         retract = hwMap.get(Servo.class, "retract");
 
@@ -63,13 +50,7 @@ public class GearheadsRobot {
 
         allHubs = hwMap.getAll(LynxModule.class);
 
-        fl.setDirection(DcMotorSimple.Direction.REVERSE);
-        bl.setDirection(DcMotorSimple.Direction.REVERSE);
-        fl.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        liftR.setDirection(DcMotorSimple.Direction.REVERSE);
-        liftL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        liftR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         for (LynxModule hub: allHubs) {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
@@ -79,30 +60,50 @@ public class GearheadsRobot {
                 RevHubOrientationOnRobot.LogoFacingDirection.RIGHT,
                 RevHubOrientationOnRobot.UsbFacingDirection.FORWARD));
         gyro.initialize(parameters);
+
+        initializeElevator(hwMap);
+        initializeArm(hwMap);
+        initializeDriveTrain(hwMap);
+        initializeClaw(hwMap);
     }
     public double getHeading() {
         return gyro.getRobotOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.RADIANS).firstAngle;
     }
 
-    public void update(double time) {
-        liftPidf.set(liftProfile.getX(time));
-        liftPidf.update(liftL.getCurrentPosition());
-        liftL.setPower(liftPidf.get());
-        liftR.setPower(liftPidf.get());
+    public void initializeElevator(HardwareMap hwMap){
+        elevator = new Elevator(hwMap);
+        elevator.initialize();
     }
+
+    public void initializeArm(HardwareMap hwMap){
+        arm = new Arm(hwMap);
+        arm.initialize();
+    }
+
+    public void initializeClaw(HardwareMap hwMap){
+        claw = new Claw(hwMap);
+        claw.initialize();
+    }
+
+    public void initializeDriveTrain(HardwareMap hwMap){
+        fl = hwMap.get(DcMotorEx.class, "fl");
+        fr = hwMap.get(DcMotorEx.class, "fr");
+        bl = hwMap.get(DcMotorEx.class, "bl");
+        br = hwMap.get(DcMotorEx.class, "br");
+
+        fl.setDirection(DcMotorSimple.Direction.REVERSE);
+        bl.setDirection(DcMotorSimple.Direction.REVERSE);
+        fl.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        fr.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        bl.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        br.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+    }
+
+
     public void setDrivePowers(double flPower, double frPower, double blPower, double brPower) {
         fl.setPower(flPower);
         fr.setPower(frPower);
         bl.setPower(blPower);
         br.setPower(brPower);
-    }
-
-    public void extendLiftProfile(double t, double xf, double vf) {
-        liftProfile = liftProfile.extendTrapezoidal(t, xf, vf);
-    }
-
-    //TODO This needs to be fixed
-    public double restTime() {
-        return max(max(liftProfile.getTf(),liftProfile.getTf()),liftProfile.getTf());
     }
 }

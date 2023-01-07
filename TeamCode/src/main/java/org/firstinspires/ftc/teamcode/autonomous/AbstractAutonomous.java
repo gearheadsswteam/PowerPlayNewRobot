@@ -22,8 +22,8 @@ public abstract class AbstractAutonomous extends LinearOpMode {
         detector.init();
         robot.drive.setPoseEstimate(initPose());
         initialize();
-        robot.liftL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.liftL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+//        robot.liftL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//        robot.liftL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         while (!isStarted() && !isStopRequested()) {
             if (detector.getCaseDetected() == caseDetected) {
                 caseDetectionLength++;
@@ -34,7 +34,7 @@ public abstract class AbstractAutonomous extends LinearOpMode {
             if (caseDetectionLength >= signalMinCount) {
                 runCase = caseDetected;
             }
-            robot.update(clock.seconds());
+            //robot.update(clock.seconds());
             telemetry.addData("Case Detected", caseDetected);
             telemetry.addData("Case to Run", runCase);
             telemetry.update();

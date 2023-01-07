@@ -80,7 +80,7 @@ public class AutonomousLeftParkNeutral extends AbstractAutonomous {
             time = clock.seconds();
 
             robot.drive.update();
-            robot.update(time);
+            //robot.update(time);
         }
     }
 

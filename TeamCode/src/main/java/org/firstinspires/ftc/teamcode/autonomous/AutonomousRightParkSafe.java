@@ -75,7 +75,7 @@ public class AutonomousRightParkSafe extends AbstractAutonomous {
         while (opModeIsActive() && !isStopRequested() && (!traj2Done || time < doneTime)) {
             time = clock.seconds();
             robot.drive.update();
-            robot.update(time);
+            //robot.update(time);
         }
     }
 

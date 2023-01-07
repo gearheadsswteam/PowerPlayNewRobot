@@ -1,10 +1,10 @@
 package org.firstinspires.ftc.teamcode.teleop;
 
+import static org.firstinspires.ftc.teamcode.classes.ValueStorage.elevatorGround;
+import static org.firstinspires.ftc.teamcode.classes.ValueStorage.elevatorHigh;
+import static org.firstinspires.ftc.teamcode.classes.ValueStorage.elevatorLow;
+import static org.firstinspires.ftc.teamcode.classes.ValueStorage.elevatorMed;
 import static org.firstinspires.ftc.teamcode.classes.ValueStorage.holderDetectionThreshold;
-import static org.firstinspires.ftc.teamcode.classes.ValueStorage.liftGroundClose;
-import static org.firstinspires.ftc.teamcode.classes.ValueStorage.liftHighClose;
-import static org.firstinspires.ftc.teamcode.classes.ValueStorage.liftLowClose;
-import static org.firstinspires.ftc.teamcode.classes.ValueStorage.liftMedClose;
 import static org.firstinspires.ftc.teamcode.classes.ValueStorage.odoUp;
 import static org.firstinspires.ftc.teamcode.classes.ValueStorage.side;
 import static java.lang.Math.PI;
@@ -61,11 +61,23 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
         LIFT_RETRACT
     }
 
-    ;
+    public enum ArmClawState {
+        ARM_DROP_CLAW_OPEN,
+        ARM_GRAB_CLAW_OPEN,
+        ARM_GRAB_CLAW_CLOSED,
+        ARM_DROP_CLAW_CLOSED
+    }
+
+    private int elevatorHeightNeeded = -1;
+    private double armPositonNeeded = -1;
+    private double clawPositonNeeded = -1;
 
     // The liftState variable is declared out here
     // so its value persists between loop() calls
     LiftState liftState = LiftState.LIFT_START;
+
+    //Arm State
+    ArmClawState armState = ArmClawState.ARM_DROP_CLAW_OPEN;
 
     // used with the dump servo, this will get covered in a bit
     ElapsedTime liftTimer = new ElapsedTime();
@@ -83,7 +95,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
         initialize();
 
         while (!isStarted() && !isStopRequested()) {
-            robot.update(clock.seconds());
+            sleep(200);
         }
         while (opModeIsActive() && !isStopRequested()) {
             if (gamepad1.a) {
@@ -139,83 +151,150 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
 
             time = clock.seconds();
 
-            switch (liftState) {
-                case LIFT_START:
-                    if (aPressed) {
-                        robot.extendLiftProfile(time, liftLowClose[0], 0);
-                        stateTime = robot.restTime();
-                    } else if (bPressed) {
-                        robot.extendLiftProfile(time, liftMedClose[0], 0);
-                        stateTime = robot.restTime();
-                    } else if (yPressed) {
-                        robot.extendLiftProfile(time, liftHighClose[0], 0);
-                        stateTime = robot.restTime();
-                    } else if (xPressed) {
-                        robot.extendLiftProfile(time, liftGroundClose[0], 0);
-                        stateTime = robot.restTime();
+            switch (armState) {
+                case ARM_DROP_CLAW_OPEN:
+                    if (rbPressed) {
+                        armPositonNeeded = ValueStorage.armGrabPositon;
+
+                        robot.arm.moveArmToPosition(armPositonNeeded);
+                        armState = ArmClawState.ARM_GRAB_CLAW_OPEN;
                     }
-                    liftState = LiftState.LIFT_EXTEND;
                     break;
 
-
-                case LiftState.LIFT_EXTEND:
+                case ARM_GRAB_CLAW_OPEN:
                     // check if the lift has finished extending,
-                    // otherwise do nothing.
-                    if (Math.abs(robot.liftL.getCurrentPosition() - robot.liftProfile.getFinalX()) < 10) {
+                    if (Math.abs(robot.arm.getCurrentPosition() - armPositonNeeded) < 0.1) {
                         // our threshold is within
-                        // 10 encoder ticks of our target.
-                        // this is pretty arbitrary, and would have to be
-                        // tweaked for each robot.
-
-                        // set the lift dump to dump
-                        //Drop cargo
-
-                        liftTimer.reset();
-                        liftState = LiftState.LIFT_DUMP;
+                        armPositonNeeded = -1;
+                        if (rbPressed) {
+                            robot.claw.closeClaw();
+                            armState = ArmClawState.ARM_GRAB_CLAW_CLOSED;
+                        }
+                    } else {//wait till arm has reached the position
+                        //waiting
                     }
                     break;
-                case LiftState.LIFT_DUMP:
-                    if (liftTimer.seconds() >= DUMP_TIME) {
-                        // The robot waited long enough, time to start
-                        // retracting the lift
-                        //@TODO
-                        //Drop Cargo here
-                        liftState = LiftState.LIFT_RETRACT;
+
+
+                case ARM_GRAB_CLAW_CLOSED:
+                    // check if the lift has finished extending,
+                    if (Math.abs(robot.claw.getCurrentPosition() - clawPositonNeeded) < 0.1) {
+                        // our threshold is within
+                        clawPositonNeeded = -1;
+                        if (rbPressed) {
+                            armPositonNeeded = ValueStorage.armDropPosition;
+                            robot.arm.moveArmToPosition(armPositonNeeded);
+                            armState = ArmClawState.ARM_DROP_CLAW_CLOSED;
+                        }
+                    } else {//wait till arm has reached the position
+                        //waiting
                     }
                     break;
-                case LiftState.LIFT_RETRACT:
-                    if (Math.abs(robot.liftL.getCurrentPosition() - LIFT_LOW) < 10) {
+
+
+                case ARM_DROP_CLAW_CLOSED:
+                    // check if the lift has finished extending,
+                    if (Math.abs(robot.claw.getCurrentPosition() - clawPositonNeeded) < 0.1) {
+                        //Wait for Elevator command
+                    } else {//wait till arm has reached the position
+                        //waiting
+                    }
+                    break;
+
+
+                switch (liftState) {
+                    case LIFT_START:
+                        if (aPressed) {
+                            elevatorHeightNeeded = elevatorLow;
+                            liftState = LiftState.LIFT_EXTEND;
+
+                        } else if (bPressed) {
+                            elevatorHeightNeeded = elevatorMed;
+                            liftState = LiftState.LIFT_EXTEND;
+
+                        } else if (yPressed) {
+                            elevatorHeightNeeded = elevatorHigh;
+                            liftState = LiftState.LIFT_EXTEND;
+
+                        } else if (xPressed) {
+                            elevatorHeightNeeded = elevatorGround;
+                            liftState = LiftState.LIFT_EXTEND;
+                        }
+
+                        //Need to do this for all heights
+                        if (liftState == LiftState.LIFT_EXTEND) {
+                            robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                        }
+                        break;
+
+                    case LIFT_EXTEND:
+                        // check if the lift has finished extending,
+                        if (Math.abs(robot.elevator.getCurrentHeight() - elevatorHeightNeeded) < 10) {
+                            // our threshold is within
+                            // 10 encoder ticks of our target.
+                            robot.elevator.stopElevator();
+                            robot.elevator.resetElevator(); //reset the PID controller
+                            liftTimer.reset();
+                            elevatorHeightNeeded = -1;
+
+                            // set the lift dump to dump
+                            //Drop cargo
+
+
+                            liftState = LiftState.LIFT_DUMP;
+                        } else {//Keep moving the elevator to desired height
+                            robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                        }
+                        break;
+
+                    case LIFT_DUMP:
+                        robot.claw.openClaw();//Dump the cone
+
+                        if (liftTimer.seconds() >= DUMP_TIME) {
+                            // The robot waited long enough, time to start
+                            // retracting the lift
+                            elevatorHeightNeeded = elevatorGround;
+                            robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                            liftState = LiftState.LIFT_RETRACT;
+                        }
+                        break;
+
+                    case LIFT_RETRACT:
+                        if (Math.abs(robot.elevator.getCurrentHeightToAchieve() - elevatorHeightNeeded) < 10) {
+                            robot.elevator.stopElevator();
+                            robot.elevator.resetElevator(); //reset the PID controller
+                            liftTimer.reset();
+                            elevatorHeightNeeded = -1;
+
+                            liftState = LiftState.LIFT_START;
+                        } else {
+                            robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                        }
+                        break;
+                    default:
+                        // should never be reached, as liftState should never be null
                         liftState = LiftState.LIFT_START;
-                    }
-                    break;
-                default:
-                    // should never be reached, as liftState should never be null
-                    liftState = LiftState.LIFT_START;
+                }
+            }
+
+            robotHeading = robot.getHeading() + initialHeading;
+            moveAngle = atan2(-gamepad2.left_stick_x, -gamepad2.left_stick_y) - robotHeading;
+            moveMagnitude = abs(pow(gamepad2.left_stick_x, 3)) + abs(pow(gamepad2.left_stick_y, 3));
+            if (moveMagnitude < 0.01) {
+                moveMagnitude = 0;
+            }
+            turn = pow(gamepad2.right_stick_x, 3);
+
+            if (gamepad2.right_trigger < 0.1) {
+                robot.setDrivePowers(moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn,
+                        moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn,
+                        moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn,
+                        moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn);
+            } else {
+                robot.setDrivePowers((moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn) / 4,
+                        (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn) / 4,
+                        (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn) / 4,
+                        (moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn) / 4);
             }
         }
-
-
-        robot.update(time);
-
-        robotHeading = robot.getHeading() + initialHeading;
-        moveAngle = atan2(-gamepad2.left_stick_x, -gamepad2.left_stick_y) - robotHeading;
-        moveMagnitude = abs(pow(gamepad2.left_stick_x, 3)) + abs(pow(gamepad2.left_stick_y, 3));
-        if (moveMagnitude < 0.01) {
-            moveMagnitude = 0;
-        }
-        turn = pow(gamepad2.right_stick_x, 3);
-
-        if (gamepad2.right_trigger < 0.1) {
-            robot.setDrivePowers(moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn,
-                    moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn,
-                    moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn,
-                    moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn);
-        } else {
-            robot.setDrivePowers((moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn) / 4,
-                    (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn) / 4,
-                    (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn) / 4,
-                    (moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn) / 4);
-        }
     }
-}
-}
