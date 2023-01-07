@@ -48,6 +48,9 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
     boolean lbReleased = false;
     boolean rbPressed = false;
     boolean rbReleased = false;
+
+    boolean coneAvailable = false;
+
     ElapsedTime clock = new ElapsedTime();
 
 
@@ -151,152 +154,187 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
 
             time = clock.seconds();
 
-            switch (armState) {
-                case ARM_DROP_CLAW_OPEN:
+            executeArmStateMachine(armState);
+
+            robotHeading = robot.getHeading() + initialHeading;
+            moveAngle = atan2(-gamepad2.left_stick_x, -gamepad2.left_stick_y) - robotHeading;
+            moveMagnitude = abs(pow(gamepad2.left_stick_x, 3)) + abs(pow(gamepad2.left_stick_y, 3));
+            if (moveMagnitude < 0.01) {
+                moveMagnitude = 0;
+            }
+            turn = pow(gamepad2.right_stick_x, 3);
+
+            if (gamepad2.right_trigger < 0.1) {
+                robot.setDrivePowers(moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn,
+                        moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn,
+                        moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn,
+                        moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn);
+            } else {
+                robot.setDrivePowers((moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn) / 4,
+                        (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn) / 4,
+                        (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn) / 4,
+                        (moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn) / 4);
+            }
+        }
+    }
+
+    /**
+     * By pressing Right Bumper we move the arm and claw from init position to grab to init
+     * In init position with cone secured, it can then execute elevator state machine
+     * @param armClawStateVal state of the arm & claw
+     */
+    private void executeArmStateMachine(ArmClawState armClawStateVal){
+        switch (armClawStateVal) {
+            case ARM_DROP_CLAW_OPEN:
+                if (rbPressed) {
+                    armPositonNeeded = ValueStorage.armGrabPositon;
+
+                    robot.arm.moveArmToPosition(armPositonNeeded);
+                    armState = ArmClawState.ARM_GRAB_CLAW_OPEN;
+                }
+                coneAvailable = false;
+                break;
+
+            case ARM_GRAB_CLAW_OPEN:
+                // check if the lift has finished extending,
+                if (Math.abs(robot.arm.getCurrentPosition() - armPositonNeeded) < 0.1) {
+                    // our threshold is within
+                    armPositonNeeded = -1;
                     if (rbPressed) {
-                        armPositonNeeded = ValueStorage.armGrabPositon;
+                        robot.claw.closeClaw();
+                        armState = ArmClawState.ARM_GRAB_CLAW_CLOSED;
+                    }
+                } else {//wait till arm has reached the position
+                    //waiting
+                }
+                coneAvailable = false;
+                break;
 
+
+            case ARM_GRAB_CLAW_CLOSED:
+                // check if the lift has finished extending,
+                if (Math.abs(robot.claw.getCurrentPosition() - clawPositonNeeded) < 0.1) {
+                    // our threshold is within
+                    clawPositonNeeded = -1;
+                    if (rbPressed) {
+                        armPositonNeeded = ValueStorage.armDropPosition;
                         robot.arm.moveArmToPosition(armPositonNeeded);
-                        armState = ArmClawState.ARM_GRAB_CLAW_OPEN;
+                        armState = ArmClawState.ARM_DROP_CLAW_CLOSED;
                     }
-                    break;
-
-                case ARM_GRAB_CLAW_OPEN:
-                    // check if the lift has finished extending,
-                    if (Math.abs(robot.arm.getCurrentPosition() - armPositonNeeded) < 0.1) {
-                        // our threshold is within
-                        armPositonNeeded = -1;
-                        if (rbPressed) {
-                            robot.claw.closeClaw();
-                            armState = ArmClawState.ARM_GRAB_CLAW_CLOSED;
-                        }
-                    } else {//wait till arm has reached the position
-                        //waiting
-                    }
-                    break;
+                    coneAvailable = true;
+                } else {//wait till arm has reached the position
+                    //waiting
+                }
+                break;
 
 
-                case ARM_GRAB_CLAW_CLOSED:
-                    // check if the lift has finished extending,
-                    if (Math.abs(robot.claw.getCurrentPosition() - clawPositonNeeded) < 0.1) {
-                        // our threshold is within
-                        clawPositonNeeded = -1;
-                        if (rbPressed) {
-                            armPositonNeeded = ValueStorage.armDropPosition;
-                            robot.arm.moveArmToPosition(armPositonNeeded);
-                            armState = ArmClawState.ARM_DROP_CLAW_CLOSED;
-                        }
-                    } else {//wait till arm has reached the position
-                        //waiting
-                    }
-                    break;
+            case ARM_DROP_CLAW_CLOSED:
+                // check if the lift has finished extending,
+                if (Math.abs(robot.claw.getCurrentPosition() - clawPositonNeeded) < 0.1) {
+                    //Wait for Elevator command
+                    executeElevatorStateMachine(liftState);
+                } else {//wait till arm has reached the position
+                    //waiting
+                }
+                coneAvailable = true;
+                break;
+        }
+
+    }
+
+    /**
+     * By pressing a,b,x & y the elevator moves to different height states
+     * By pressing left bumper the cone is dropped
+     * @param liftStateVal
+     */
+    private void executeElevatorStateMachine(LiftState liftStateVal) {
+        if(armState != ArmClawState.ARM_DROP_CLAW_CLOSED && !coneAvailable){
+            //Error we are in wrong state
+            return;
+        }
+
+        switch (liftStateVal) {
+            case LIFT_START:
+                if (aPressed) {
+                    elevatorHeightNeeded = elevatorLow;
+                    liftState = LiftState.LIFT_EXTEND;
+
+                } else if (bPressed) {
+                    elevatorHeightNeeded = elevatorMed;
+                    liftState = LiftState.LIFT_EXTEND;
+
+                } else if (yPressed) {
+                    elevatorHeightNeeded = elevatorHigh;
+                    liftState = LiftState.LIFT_EXTEND;
+
+                } else if (xPressed) {
+                    elevatorHeightNeeded = elevatorGround;
+                    liftState = LiftState.LIFT_EXTEND;
+                }
+
+                //Need to do this for all heights
+                if (liftState == LiftState.LIFT_EXTEND) {
+                    robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                }
+                break;
+
+            case LIFT_EXTEND:
+                // check if the lift has finished extending,
+                if (Math.abs(robot.elevator.getCurrentHeight() - elevatorHeightNeeded) < 10) {
+                    // our threshold is within
+                    // 10 encoder ticks of our target.
+                    robot.elevator.stopElevator();
+                    robot.elevator.resetElevator(); //reset the PID controller
+                    liftTimer.reset();
+                    elevatorHeightNeeded = -1;
+
+                    // set the lift dump to dump
+                    //Drop cargo
 
 
-                case ARM_DROP_CLAW_CLOSED:
-                    // check if the lift has finished extending,
-                    if (Math.abs(robot.claw.getCurrentPosition() - clawPositonNeeded) < 0.1) {
-                        //Wait for Elevator command
-                    } else {//wait till arm has reached the position
-                        //waiting
-                    }
-                    break;
-            }
+                    liftState = LiftState.LIFT_DUMP;
+                } else {//Keep moving the elevator to desired height
+                    robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                }
+                break;
 
-
-            switch (liftState) {
-                case LIFT_START:
-                    if (aPressed) {
-                        elevatorHeightNeeded = elevatorLow;
-                        liftState = LiftState.LIFT_EXTEND;
-
-                    } else if (bPressed) {
-                        elevatorHeightNeeded = elevatorMed;
-                        liftState = LiftState.LIFT_EXTEND;
-
-                    } else if (yPressed) {
-                        elevatorHeightNeeded = elevatorHigh;
-                        liftState = LiftState.LIFT_EXTEND;
-
-                    } else if (xPressed) {
-                        elevatorHeightNeeded = elevatorGround;
-                        liftState = LiftState.LIFT_EXTEND;
-                    }
-
-                    //Need to do this for all heights
-                    if (liftState == LiftState.LIFT_EXTEND) {
-                        robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
-                    }
-                    break;
-
-                case LIFT_EXTEND:
-                    // check if the lift has finished extending,
-                    if (Math.abs(robot.elevator.getCurrentHeight() - elevatorHeightNeeded) < 10) {
-                        // our threshold is within
-                        // 10 encoder ticks of our target.
-                        robot.elevator.stopElevator();
-                        robot.elevator.resetElevator(); //reset the PID controller
-                        liftTimer.reset();
-                        elevatorHeightNeeded = -1;
-
-                        // set the lift dump to dump
-                        //Drop cargo
-
-
-                        liftState = LiftState.LIFT_DUMP;
-                    } else {//Keep moving the elevator to desired height
-                        robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
-                    }
-                    break;
-
-                case LIFT_DUMP:
+            case LIFT_DUMP:
+                if(lbPressed) {
                     robot.claw.openClaw();//Dump the cone
+                    armState = ArmClawState.ARM_DROP_CLAW_OPEN;
+                    coneAvailable = false;
+                }
 
-                    if (liftTimer.seconds() >= DUMP_TIME) {
-                        // The robot waited long enough, time to start
-                        // retracting the lift
-                        elevatorHeightNeeded = elevatorGround;
-                        robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
-                        liftState = LiftState.LIFT_RETRACT;
-                    }
-                    break;
+                if (liftTimer.seconds() >= DUMP_TIME && !coneAvailable) {
+                    // The robot waited long enough, time to start
+                    // retracting the lift
+                    elevatorHeightNeeded = elevatorGround;
+                    robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                    liftTimer.reset();
 
-                case LIFT_RETRACT:
-                    if (Math.abs(robot.elevator.getCurrentHeightToAchieve() - elevatorHeightNeeded) < 10) {
-                        robot.elevator.stopElevator();
-                        robot.elevator.resetElevator(); //reset the PID controller
-                        liftTimer.reset();
-                        elevatorHeightNeeded = -1;
+                    armState = ArmClawState.ARM_DROP_CLAW_OPEN;
+                    liftState = LiftState.LIFT_RETRACT;
+                }
+                break;
 
-                        liftState = LiftState.LIFT_START;
-                    } else {
-                        robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
-                    }
-                    break;
-                default:
-                    // should never be reached, as liftState should never be null
+            case LIFT_RETRACT:
+                if (Math.abs(robot.elevator.getCurrentHeightToAchieve() - elevatorHeightNeeded) < 10) {
+                    robot.elevator.stopElevator();
+                    robot.elevator.resetElevator(); //reset the PID controller
+                    liftTimer.reset();
+                    elevatorHeightNeeded = -1;
+
+                    armState = ArmClawState.ARM_DROP_CLAW_OPEN;
                     liftState = LiftState.LIFT_START;
-            }
-        }
-
-        robotHeading = robot.getHeading() + initialHeading;
-        moveAngle = atan2(-gamepad2.left_stick_x, -gamepad2.left_stick_y) - robotHeading;
-        moveMagnitude = abs(pow(gamepad2.left_stick_x, 3)) + abs(pow(gamepad2.left_stick_y, 3));
-        if (moveMagnitude < 0.01) {
-            moveMagnitude = 0;
-        }
-        turn = pow(gamepad2.right_stick_x, 3);
-
-        if (gamepad2.right_trigger < 0.1) {
-            robot.setDrivePowers(moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn,
-                    moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn,
-                    moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn,
-                    moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn);
-        } else {
-            robot.setDrivePowers((moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) + turn) / 4,
-                    (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) - turn) / 4,
-                    (moveMagnitude * Range.clip(sin(PI / 4 + moveAngle) / abs(cos(PI / 4 + moveAngle)), -1, 1) + turn) / 4,
-                    (moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn) / 4);
+                } else {
+                    robot.elevator.moveElevatorToHeight(elevatorHeightNeeded);
+                }
+                break;
+            default:
+                // should never be reached, as liftState should never be null
+                liftState = LiftState.LIFT_START;
         }
     }
 }
+
 
