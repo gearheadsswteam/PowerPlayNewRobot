@@ -11,8 +11,7 @@ public class Arm {
     private Servo leftServo;
     private Servo rightServo;
 
-    private double currentPositionToSet;
-
+    private double armPositonNeeded = - 1;
 
 
     public Arm(HardwareMap hardwareMapMap) {
@@ -28,15 +27,15 @@ public class Arm {
     public void moveArmToPosition(double positionToMoveTo) {
         leftServo.setPosition(positionToMoveTo);
         rightServo.setPosition(1-positionToMoveTo);
-        this.currentPositionToSet = positionToMoveTo;
+        this.armPositonNeeded = positionToMoveTo;
     }
 
     public void moveArmToGrabPosition(){
         moveArmToPosition(ValueStorage.armGrabPositon);
     }
 
-    public void moveArmToDropPosition(){
-        moveArmToPosition(ValueStorage.armDropPosition);
+    public void moveArmToInitPosition(){
+        moveArmToPosition(ValueStorage.armInitPosition);
     }
 
     public void moveArmToGroundPosition(){
@@ -48,6 +47,10 @@ public class Arm {
     }
 
     public double getPositionToMoveTo() {
-        return currentPositionToSet;
+        return armPositonNeeded;
+    }
+
+    public boolean hasArmReachedNeededPosition(){
+        return (Math.abs(armPositonNeeded - getCurrentPosition()) < 10);
     }
 }

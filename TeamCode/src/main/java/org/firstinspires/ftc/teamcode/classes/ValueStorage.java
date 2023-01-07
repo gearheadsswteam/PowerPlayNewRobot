@@ -20,12 +20,12 @@ public class ValueStorage {
     public static double clawOpen = 0;
     public static double clawClosed = 0.5;
 
-    public static double armDropPosition = 0.5;
+    public static double armInitPosition = 0.5;
     public static double armGrabPositon = 0.5;
     public static double armGroundPosition = 0.5;
 
-
-
+    public static double clawOpenTime = 500;
+    public static double clawClosedTime = 500;
 
     public static int side = sides.RED;
 

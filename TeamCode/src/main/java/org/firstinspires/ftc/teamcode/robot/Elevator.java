@@ -6,6 +6,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.teamcode.classes.ValueStorage;
+
 public class Elevator {
     HardwareMap hwMap;
     private DcMotor leftMotor;
@@ -33,6 +35,11 @@ public class Elevator {
                 leftMotor.getCurrentPosition(), heightToSet);
         leftMotor.setPower(output);
         rightMotor.setPower(output);
+    }
+
+
+    public boolean isElevatorAtInitPosition(){
+        return (Math.abs(getCurrentHeight() - ValueStorage.elevatorGround) < 10);
     }
 
 
