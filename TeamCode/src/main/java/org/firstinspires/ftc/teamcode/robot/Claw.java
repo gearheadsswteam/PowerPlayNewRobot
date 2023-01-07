@@ -32,6 +32,11 @@ public class Claw {
     public boolean isClawClosed(){
         return (Math.abs(getCurrentPosition() - ValueStorage.clawClosed) < 0.1);
     }
+
+    public boolean isClawOpen(){
+        return (Math.abs(getCurrentPosition() - ValueStorage.clawOpen) < 0.1);
+    }
+
     public void openClaw(){
         moveArmToPosition(ValueStorage.clawOpen);
     }

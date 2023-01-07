@@ -13,8 +13,8 @@ public class Elevator {
     private DcMotor leftMotor;
     private DcMotor rightMotor;
     PIDFController pidf = new PIDFController(0.05, 0, 0, 0);
-    private int currentHeightToSet;
-    private static int INIT_POSITION = 0;
+    private int elevatorHeightNeeded;
+
 
 
     public Elevator(HardwareMap hardwareMapMap) {
@@ -30,11 +30,15 @@ public class Elevator {
     }
 
     public void moveElevatorToHeight(int heightToSet) {
-        currentHeightToSet = heightToSet;
+        elevatorHeightNeeded = heightToSet;
         double output = pidf.calculate(
                 leftMotor.getCurrentPosition(), heightToSet);
         leftMotor.setPower(output);
         rightMotor.setPower(output);
+    }
+
+    public void moveElevatorUntilHeightReached(){
+        moveElevatorToHeight(elevatorHeightNeeded);
     }
 
 
@@ -52,12 +56,16 @@ public class Elevator {
         return leftMotor.getCurrentPosition();
     }
 
-    public int getCurrentHeightToAchieve() {
-        return currentHeightToSet;
+    public int getCurrentHeightNeeded() {
+        return elevatorHeightNeeded;
     }
 
     public void resetElevator() {
         pidf.reset();
+    }
+
+    public boolean hasElevatorReached(){
+        return (Math.abs( getCurrentHeightNeeded() - getCurrentHeight()) <10);
     }
 }
 
