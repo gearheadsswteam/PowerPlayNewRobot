@@ -109,7 +109,7 @@ public class GearheadsRobotWithMotionProfile {
 
     public void update(double curTime){
         //Move elevator
-        boolean hasElevatorReached = this.elevator.hasElevatorReached();
+        boolean hasElevatorReached = this.elevator.hasElevatorReached(curTime);
         if(!hasElevatorReached){
             elevator.moveElevatorToHeight(curTime);
         }else{

@@ -260,7 +260,6 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
      */
     private void executeElevatorStateMachine(LiftState liftStateVal) {
         if(armState != ArmClawState.ARM_INIT_CLAW_CLOSED && !coneAvailable){
-
             return;
         }
 
@@ -286,7 +285,7 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
 
             case LIFT_EXTEND:
                 // check if the lift has finished extending,
-                if (robot.elevator.hasElevatorReached()) {
+                if (robot.elevator.hasElevatorReached(time)) {
                     liftTimer.reset();
                     liftState = LiftState.LIFT_DUMP;
                 }
@@ -311,7 +310,7 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
                 break;
 
             case LIFT_RETRACT:
-                if (robot.elevator.hasElevatorReached()) {
+                if (robot.elevator.hasElevatorReached(time)) {
                     liftTimer.reset();
 
                     armState = ArmClawState.ARM_INIT_CLAW_OPEN;
