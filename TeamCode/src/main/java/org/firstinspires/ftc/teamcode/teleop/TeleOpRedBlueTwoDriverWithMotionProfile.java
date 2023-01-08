@@ -15,6 +15,7 @@ import static java.lang.Math.pow;
 import static java.lang.Math.sin;
 
 import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.roadrunner.util.NanoClock;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -56,7 +57,7 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
 
     boolean coneAvailable = false;
 
-    ElapsedTime clock = new ElapsedTime();
+    NanoClock clock = NanoClock.system();
 
     public enum LiftState {
         LIFT_INIT,
@@ -266,26 +267,26 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
         switch (liftStateVal) {
             case LIFT_INIT:
                 if (aPressed) {
-                    robot.elevator.setProfile(elevatorLow, time);
+                    robot.elevator.setDesiredHeight(elevatorLow);
                     liftState = LiftState.LIFT_EXTEND;
 
                 } else if (bPressed) {
-                    robot.elevator.setProfile(elevatorMed, time);
+                    robot.elevator.setDesiredHeight(elevatorMed);
                     liftState = LiftState.LIFT_EXTEND;
 
                 } else if (yPressed) {
-                    robot.elevator.setProfile(elevatorHigh, time);
+                    robot.elevator.setDesiredHeight(elevatorHigh);
                     liftState = LiftState.LIFT_EXTEND;
 
                 } else if (xPressed) {
-                    robot.elevator.setProfile(elevatorGround, time);
+                    robot.elevator.setDesiredHeight(elevatorGround);
                     liftState = LiftState.LIFT_EXTEND;
                 }
                 break;
 
             case LIFT_EXTEND:
                 // check if the lift has finished extending,
-                if (robot.elevator.hasElevatorReached(time)) {
+                if (robot.elevator.isBusy()) {
                     liftTimer.reset();
                     liftState = LiftState.LIFT_DUMP;
                 }
@@ -301,7 +302,7 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
                 if (robot.claw.isClawOpen() && !coneAvailable) {
                     // The robot waited long enough, time to start
                     // retracting the lift
-                    robot.elevator.setProfile(elevatorGround, time);
+                    robot.elevator.setDesiredHeight(elevatorGround);
                     liftTimer.reset();
 
                     //armState = ArmClawState.ARM_INIT_CLAW_OPEN;
@@ -310,7 +311,7 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
                 break;
 
             case LIFT_RETRACT:
-                if (robot.elevator.hasElevatorReached(time)) {
+                if (robot.elevator.isBusy()) {
                     liftTimer.reset();
 
                     armState = ArmClawState.ARM_INIT_CLAW_OPEN;
