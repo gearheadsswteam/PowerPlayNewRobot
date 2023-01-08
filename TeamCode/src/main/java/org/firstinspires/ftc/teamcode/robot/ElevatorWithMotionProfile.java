@@ -9,8 +9,11 @@ import com.acmerobotics.roadrunner.profile.MotionState;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.classes.ValueStorage;
+
+import java.time.Clock;
 
 public class ElevatorWithMotionProfile {
     HardwareMap hwMap;
@@ -19,6 +22,7 @@ public class ElevatorWithMotionProfile {
     PIDFController controller;
     private int elevatorHeightNeeded;
     private MotionProfile profile;
+    private double profileStartTime;
     public static double liftMaxAccel = 3000;
     public static double liftMaxVel = 1400;
 
@@ -26,6 +30,7 @@ public class ElevatorWithMotionProfile {
     public ElevatorWithMotionProfile(HardwareMap hardwareMapMap) {
         hwMap = hardwareMapMap;
     }
+
 
     public void initialize() {
         leftMotor = hwMap.get(DcMotor.class, "lElMotor");
@@ -39,7 +44,9 @@ public class ElevatorWithMotionProfile {
         controller = new PIDFController(coeffs);
     }
 
-    public void moveElevatorToHeight(int heightToSet, double elapsedTime) {
+    public void setProfile(int heightToSet, double startTime){
+    //TODO: Add check to ensure the elevator is in the right init height
+
         profile = MotionProfileGenerator.generateSimpleMotionProfile(
                 new MotionState(0, 0, 0),
                 new MotionState(heightToSet, 0, 0),
@@ -47,22 +54,24 @@ public class ElevatorWithMotionProfile {
                 liftMaxAccel,
                 100
         );
+        profileStartTime = startTime;
+        elevatorHeightNeeded = heightToSet;
+    }
 
-        MotionState state = profile.get(elapsedTime);
+    public void moveElevatorToHeight(double elapsedTime) {
+        MotionState state = profile.get(elapsedTime - profileStartTime);
 
         controller.setTargetPosition(state.getX());
         controller.setTargetVelocity(state.getV());
         controller.setTargetAcceleration(state.getA());
 
         double correction = controller.update(leftMotor.getCurrentPosition());
-        elevatorHeightNeeded = heightToSet;
+
         leftMotor.setPower(correction);
         rightMotor.setPower(correction);
     }
 
-    public void moveElevatorUntilHeightReached(double elapsedTime) {
-        moveElevatorToHeight(elevatorHeightNeeded, elapsedTime);
-    }
+
 
 
     public boolean isElevatorAtInitPosition() {
@@ -85,6 +94,7 @@ public class ElevatorWithMotionProfile {
 
     public void resetElevator() {
         controller.reset();
+        profile = null;
     }
 
     public boolean hasElevatorReached() {

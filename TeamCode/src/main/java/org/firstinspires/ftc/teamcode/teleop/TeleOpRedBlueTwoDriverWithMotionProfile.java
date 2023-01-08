@@ -23,12 +23,12 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.classes.ValueStorage;
-import org.firstinspires.ftc.teamcode.robot.GearheadsRobot;
+import org.firstinspires.ftc.teamcode.robot.GearheadsRobotWithMotionProfile;
 
 
-@TeleOp(name = "TeleOpRedBlueTwoDriver")
+@TeleOp(name = "TeleOpRedBlueTwoDriverWProfiling")
 public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
-    GearheadsRobot robot = new GearheadsRobot();
+    GearheadsRobotWithMotionProfile robot = new GearheadsRobotWithMotionProfile();
     FtcDashboard dashboard = FtcDashboard.getInstance();
     Telemetry dashboardTelemetry = dashboard.getTelemetry();
     StringBuffer stateMachineTelemetry = new StringBuffer();
@@ -185,6 +185,7 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
                         (moveMagnitude * Range.clip(sin(PI / 4 - moveAngle) / abs(cos(PI / 4 - moveAngle)), -1, 1) - turn) / 4);
             }
             updateTelemetry();
+            robot.update(time);
         }
     }
 
@@ -266,19 +267,19 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
         switch (liftStateVal) {
             case LIFT_INIT:
                 if (aPressed) {
-                    robot.elevator.moveElevatorToHeight(elevatorLow);
+                    robot.elevator.setProfile(elevatorLow, time);
                     liftState = LiftState.LIFT_EXTEND;
 
                 } else if (bPressed) {
-                    robot.elevator.moveElevatorToHeight(elevatorMed);
+                    robot.elevator.setProfile(elevatorMed, time);
                     liftState = LiftState.LIFT_EXTEND;
 
                 } else if (yPressed) {
-                    robot.elevator.moveElevatorToHeight(elevatorHigh);
+                    robot.elevator.setProfile(elevatorHigh, time);
                     liftState = LiftState.LIFT_EXTEND;
 
                 } else if (xPressed) {
-                    robot.elevator.moveElevatorToHeight(elevatorGround);
+                    robot.elevator.setProfile(elevatorGround, time);
                     liftState = LiftState.LIFT_EXTEND;
                 }
                 break;
@@ -286,13 +287,8 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
             case LIFT_EXTEND:
                 // check if the lift has finished extending,
                 if (robot.elevator.hasElevatorReached()) {
-                    robot.elevator.stopElevator();
-                    robot.elevator.resetElevator(); //reset the PID controller
                     liftTimer.reset();
-
                     liftState = LiftState.LIFT_DUMP;
-                } else {//Keep moving the elevator to desired height
-                    robot.elevator.moveElevatorUntilHeightReached();
                 }
                 break;
 
@@ -306,7 +302,7 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
                 if (robot.claw.isClawOpen() && !coneAvailable) {
                     // The robot waited long enough, time to start
                     // retracting the lift
-                    robot.elevator.moveElevatorToHeight(elevatorGround);
+                    robot.elevator.setProfile(elevatorGround, time);
                     liftTimer.reset();
 
                     //armState = ArmClawState.ARM_INIT_CLAW_OPEN;
@@ -316,14 +312,10 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
 
             case LIFT_RETRACT:
                 if (robot.elevator.hasElevatorReached()) {
-                    robot.elevator.stopElevator();
-                    robot.elevator.resetElevator(); //reset the PID controller
                     liftTimer.reset();
 
                     armState = ArmClawState.ARM_INIT_CLAW_OPEN;
                     liftState = LiftState.LIFT_INIT;
-                } else {
-                    robot.elevator.moveElevatorUntilHeightReached();
                 }
                 coneAvailable = false;
                 break;
