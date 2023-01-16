@@ -34,13 +34,17 @@ public class Arm {
         moveArmToPosition(ValueStorage.armGrabPositon);
     }
 
-    public void moveArmToInitPosition(){
-        moveArmToPosition(ValueStorage.armInitPosition);
+    public void moveArmToDropPosition(){
+        moveArmToPosition(ValueStorage.armDropPosition);
     }
 
-    public void moveArmToGroundPosition(){
-        moveArmToPosition(ValueStorage.armGroundPosition);
-    }
+    //public void moveArmToInitPosition(){
+    //    moveArmToPosition(ValueStorage.armInitPosition);
+    //}
+
+//    public void moveArmToGroundPosition(){
+//        moveArmToPosition(ValueStorage.armGroundPosition);
+//    }
 
     public double getCurrentPosition() {
         return leftServo.getPosition();

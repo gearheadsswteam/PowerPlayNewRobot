@@ -96,7 +96,7 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
         }
 
         //Move arm & claw to Init/open position
-        robot.arm.moveArmToInitPosition();
+        robot.arm.moveArmToGrabPosition();
         robot.claw.openClaw();
         armState = ArmClawState.ARM_INIT_CLAW_OPEN;
     }
@@ -110,51 +110,8 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
             sleep(200);
         }
         while (opModeIsActive() && !isStopRequested()) {
-            if (gamepad1.a) {
-                aPressed = aReleased;
-                aReleased = false;
-            } else {
-                aPressed = false;
-                aReleased = true;
-            }
-            if (gamepad1.b) {
-                bPressed = bReleased;
-                bReleased = false;
-            } else {
-                bPressed = false;
-                bReleased = true;
-            }
-            if (gamepad1.x) {
-                xPressed = xReleased;
-                xReleased = false;
-            } else {
-                xPressed = false;
-                xReleased = true;
-            }
-            if (gamepad1.y) {
-                yPressed = yReleased;
-                yReleased = false;
-            } else {
-                yPressed = false;
-                yReleased = true;
-            }
-            if (gamepad1.left_bumper) {
-                lbPressed = lbReleased;
-                lbReleased = false;
-            } else {
-                lbPressed = false;
-                lbReleased = true;
-            }
-            if (gamepad1.right_bumper) {
-                rbPressed = rbReleased;
-                rbReleased = false;
-            } else {
-                rbPressed = false;
-                rbReleased = true;
-            }
-            if (gamepad2.ps) {
-                initialHeading -= robotHeading;
-            }
+            readGamepad();
+
             if (robot.holder.getDistance(DistanceUnit.INCH) < holderDetectionThreshold) {
                 holderDetectionCount++;
             } else {
@@ -187,6 +144,54 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
             }
             updateTelemetry();
             robot.update(time);
+        }
+    }
+
+    private void readGamepad() {
+        if (gamepad1.a) {
+            aPressed = aReleased;
+            aReleased = false;
+        } else {
+            aPressed = false;
+            aReleased = true;
+        }
+        if (gamepad1.b) {
+            bPressed = bReleased;
+            bReleased = false;
+        } else {
+            bPressed = false;
+            bReleased = true;
+        }
+        if (gamepad1.x) {
+            xPressed = xReleased;
+            xReleased = false;
+        } else {
+            xPressed = false;
+            xReleased = true;
+        }
+        if (gamepad1.y) {
+            yPressed = yReleased;
+            yReleased = false;
+        } else {
+            yPressed = false;
+            yReleased = true;
+        }
+        if (gamepad1.left_bumper) {
+            lbPressed = lbReleased;
+            lbReleased = false;
+        } else {
+            lbPressed = false;
+            lbReleased = true;
+        }
+        if (gamepad1.right_bumper) {
+            rbPressed = rbReleased;
+            rbReleased = false;
+        } else {
+            rbPressed = false;
+            rbReleased = true;
+        }
+        if (gamepad2.ps) {
+            initialHeading -= robotHeading;
         }
     }
 
@@ -229,7 +234,7 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
                     coneAvailable = true;
                     //TODO: this button press could be eliminated and the arm can be moved automatically
                     if (rbPressed) {
-                        robot.arm.moveArmToPosition(ValueStorage.armInitPosition);
+                        robot.arm.moveArmToDropPosition();
                         armState = ArmClawState.ARM_INIT_CLAW_CLOSED;
                     }
 
@@ -289,6 +294,8 @@ public class TeleOpRedBlueTwoDriverWithMotionProfile extends LinearOpMode {
                 if (robot.elevator.isBusy()) {
                     liftTimer.reset();
                     liftState = LiftState.LIFT_DUMP;
+                }else{
+                    //Move the arm 180 degrees tp drop
                 }
                 break;
 

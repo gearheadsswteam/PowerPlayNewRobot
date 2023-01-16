@@ -85,7 +85,7 @@ public class ElevatorWithMotionProfile {
         setPower(power);
     }
 
-    private boolean isElevatorAtInitPosition() {
+    public boolean isElevatorAtInitPosition() {
         return (Math.abs(getCurrentHeight() - ValueStorage.elevatorGround) < 10);
     }
 

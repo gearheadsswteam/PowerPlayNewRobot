@@ -5,9 +5,10 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.robot.GearheadsRobot;
+import org.firstinspires.ftc.teamcode.robot.GearheadsRobotWithMotionProfile;
 import org.firstinspires.ftc.teamcode.vision.SignalDetector;
 public abstract class AbstractAutonomous extends LinearOpMode {
-    public GearheadsRobot robot = new GearheadsRobot();
+    GearheadsRobotWithMotionProfile robot = new GearheadsRobotWithMotionProfile();
     SignalDetector detector;
     int runCase = 2;
     int caseDetected = 2;

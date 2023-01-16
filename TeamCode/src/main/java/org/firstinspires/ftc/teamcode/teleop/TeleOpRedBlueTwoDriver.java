@@ -95,7 +95,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
         }
 
         //Move arm & claw to Init/open position
-        robot.arm.moveArmToInitPosition();
+        robot.arm.moveArmToGrabPosition();
         robot.claw.openClaw();
         armState = ArmClawState.ARM_INIT_CLAW_OPEN;
     }
@@ -227,7 +227,7 @@ public class TeleOpRedBlueTwoDriver extends LinearOpMode {
                     coneAvailable = true;
                     //TODO: this button press could be eliminated and the arm can be moved automatically
                     if (rbPressed) {
-                        robot.arm.moveArmToPosition(ValueStorage.armInitPosition);
+                        robot.arm.moveArmToDropPosition();
                         armState = ArmClawState.ARM_INIT_CLAW_CLOSED;
                     }
 

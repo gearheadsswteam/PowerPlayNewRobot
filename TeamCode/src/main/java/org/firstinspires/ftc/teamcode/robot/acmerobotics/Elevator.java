@@ -10,6 +10,7 @@ import com.acmerobotics.roadrunner.util.NanoClock;
 import com.qualcomm.hardware.motors.NeveRest20Gearmotor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 
@@ -18,9 +19,9 @@ import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigu
  */
 @Config
 public class Elevator {
-    private static final MotorConfigurationType MOTOR_CONFIG =
-            MotorConfigurationType.getMotorType(NeveRest20Gearmotor.class);
-    private static final double TICKS_PER_REV = MOTOR_CONFIG.getTicksPerRev();
+   // private static final MotorConfigurationType MOTOR_CONFIG =
+   //         MotorConfigurationType.getMotorType(NeveRest20Gearmotor.class);
+    private static double TICKS_PER_REV;
 
     public static double SPOOL_RADIUS = 1; // in
     public static double GEAR_RATIO = 1; // output (spool) speed / input (motor) speed
@@ -28,7 +29,7 @@ public class Elevator {
     // the operating range of the elevator is restricted to [0, MAX_HEIGHT]
     public static double MAX_HEIGHT = 10; // in
 
-    public static PIDCoefficients PID = new PIDCoefficients(0, 0, 0);
+    public static PIDCoefficients PID = new PIDCoefficients(0.5, 0, 0);
 
     public static double MAX_VEL = 10; // in/s
     public static double MAX_ACCEL = 10; // in/s^2
@@ -39,7 +40,8 @@ public class Elevator {
     public static double kStatic = 0;
 
 
-    private DcMotorEx motor;
+    private DcMotorEx leftLiftMotor;
+    private DcMotorEx rightLiftMotor;
     private PIDFController controller;
     private MotionProfile profile;
     private NanoClock clock = NanoClock.system();
@@ -55,15 +57,20 @@ public class Elevator {
         return rpm * GEAR_RATIO * 2 * Math.PI * SPOOL_RADIUS / 60.0;
     }
 
-    public static double getMaxRpm() {
-        return MOTOR_CONFIG.getMaxRPM();
+    public double getMaxRpm() {
+        return leftLiftMotor.getMotorType().getMaxRPM();
     }
 
     public Elevator(HardwareMap hardwareMap) {
-        motor = hardwareMap.get(DcMotorEx.class, "elevatorMotor");
-        motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        leftLiftMotor = hardwareMap.get(DcMotorEx.class, "liftL");
+        rightLiftMotor = hardwareMap.get(DcMotorEx.class, "liftR");
+        leftLiftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightLiftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         // if necessary, reverse the motor so "up" is positive
-        // motor.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftLiftMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        rightLiftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        TICKS_PER_REV = leftLiftMotor.getMotorType().getTicksPerRev();
 
         // motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
@@ -71,7 +78,7 @@ public class Elevator {
         // of motion (e.g., gravity, kinetic friction, or a combination thereof), it may be
         // beneficial to compensate for it with a gravity feedforward
         controller = new PIDFController(PID, kV, kA, kStatic);
-        offset = motor.getCurrentPosition();
+        offset = leftLiftMotor.getCurrentPosition();
     }
 
     public boolean isBusy() {
@@ -93,7 +100,7 @@ public class Elevator {
     }
 
     public double getCurrentHeight() {
-        return encoderTicksToInches(motor.getCurrentPosition() - offset);
+        return encoderTicksToInches(leftLiftMotor.getCurrentPosition() - offset);
     }
 
     public void update() {
@@ -116,7 +123,8 @@ public class Elevator {
     }
 
     public void setPower(double power) {
-        motor.setPower(power);
+        leftLiftMotor.setPower(power);
+        rightLiftMotor.setPower(power);
     }
 
 }
