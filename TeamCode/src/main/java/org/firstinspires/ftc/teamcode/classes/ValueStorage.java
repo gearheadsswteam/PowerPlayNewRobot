@@ -13,6 +13,7 @@ public class ValueStorage {
 
 
     public static int elevatorGround = 0;
+    public static int elevatorStackPickupInit = 175;
     public static int elevatorStackPickup = 175;
     public static int elevatorLow = 175;
     public static int elevatorMed = 600;

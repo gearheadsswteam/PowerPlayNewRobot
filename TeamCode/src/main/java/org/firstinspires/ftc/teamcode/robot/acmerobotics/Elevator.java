@@ -7,12 +7,10 @@ import com.acmerobotics.roadrunner.profile.MotionProfile;
 import com.acmerobotics.roadrunner.profile.MotionProfileGenerator;
 import com.acmerobotics.roadrunner.profile.MotionState;
 import com.acmerobotics.roadrunner.util.NanoClock;
-import com.qualcomm.hardware.motors.NeveRest20Gearmotor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 
 /*
  * Hardware class for an elevator or linear lift driven by a pulley system.
@@ -27,7 +25,7 @@ public class Elevator {
     public static double GEAR_RATIO = 1; // output (spool) speed / input (motor) speed
 
     // the operating range of the elevator is restricted to [0, MAX_HEIGHT]
-    public static double MAX_HEIGHT = 10; // in
+    public static double MAX_HEIGHT = 26; // in
 
     public static PIDCoefficients PID = new PIDCoefficients(0.5, 0, 0);
 
@@ -50,7 +48,8 @@ public class Elevator {
 
 
     private static double encoderTicksToInches(int ticks) {
-        return SPOOL_RADIUS * 2 * Math.PI * GEAR_RATIO * ticks / TICKS_PER_REV;
+        //return (26/1109)*ticks;
+        return (26*ticks)/1109;
     }
 
     public static double rpmToVelocity(double rpm) {
@@ -101,6 +100,14 @@ public class Elevator {
 
     public double getCurrentHeight() {
         return encoderTicksToInches(leftLiftMotor.getCurrentPosition() - offset);
+    }
+
+    public double getOffset() {
+        return  offset;
+    }
+
+    public int getPosition() {
+        return leftLiftMotor.getCurrentPosition();
     }
 
     public void update() {

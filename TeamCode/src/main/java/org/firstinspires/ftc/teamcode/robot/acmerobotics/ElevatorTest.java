@@ -19,13 +19,32 @@ public class ElevatorTest extends LinearOpMode {
 
         if (isStopRequested()) return;
 
-        while (!isStopRequested()) {
-            elevator.setHeight(Elevator.MAX_HEIGHT * Math.random());
+        double currentHeight = elevator.getCurrentHeight();
 
-            double startTime = clock.seconds();
-            while (!isStopRequested() && (clock.seconds() - startTime) < 5) {
-                elevator.update();
-            }
+        double curHeightToDisplay = elevator.getCurrentHeight();
+        telemetry.addData("Current  Height " + curHeightToDisplay,"");
+        telemetry.update();
+
+        //sleep(3000);
+
+        elevator.setHeight(Elevator.MAX_HEIGHT);
+        while (elevator.isBusy()) {
+            elevator.update();
         }
+
+        curHeightToDisplay = elevator.getCurrentHeight();
+        telemetry.addData("Current  Height " + curHeightToDisplay,"");
+        telemetry.update();
+
+        //sleep(3000);
+
+        elevator.setHeight(currentHeight);
+        while (elevator.isBusy()) {
+            elevator.update();
+        }
+
+        curHeightToDisplay = elevator.getCurrentHeight();
+        telemetry.addData("Current  Height " + curHeightToDisplay,"");
+        telemetry.update();
     }
 }
