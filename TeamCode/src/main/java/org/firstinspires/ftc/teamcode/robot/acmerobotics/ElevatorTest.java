@@ -8,7 +8,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
  * Simple test of motion-profiled elevator autonomous operation. The elevator should move *smoothly*
  * between random heights.
  */
-@Autonomous(group = "elevator")
+@Autonomous(name = "ElevatorTest 2", group = "elevator")
 public class ElevatorTest extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
@@ -19,32 +19,21 @@ public class ElevatorTest extends LinearOpMode {
 
         if (isStopRequested()) return;
 
-        double currentHeight = elevator.getCurrentHeight();
+        int count = 1;
+        while (!isStopRequested()) {
+            double targetHeight = Elevator.MAX_HEIGHT * Math.random();
+            elevator.setHeight(targetHeight);
+            telemetry.addData("Target Height " + targetHeight,"");
 
-        double curHeightToDisplay = elevator.getCurrentHeight();
-        telemetry.addData("Current  Height " + curHeightToDisplay,"");
-        telemetry.update();
-
-        //sleep(3000);
-
-        elevator.setHeight(Elevator.MAX_HEIGHT);
-        while (elevator.isBusy()) {
-            elevator.update();
+            double startTime = clock.seconds();
+            while (!isStopRequested() && (clock.seconds() - startTime) < 5) {
+                elevator.update();
+            }
+            int curPositon = elevator.getPosition();
+            double curHeight = elevator.getCurrentHeight();
+            double offSet = elevator.getOffset();
+            telemetry.addData(count++ + " Position " + curPositon + " Height " + curHeight + " offset " + offSet, "");
+            telemetry.update();
         }
-
-        curHeightToDisplay = elevator.getCurrentHeight();
-        telemetry.addData("Current  Height " + curHeightToDisplay,"");
-        telemetry.update();
-
-        //sleep(3000);
-
-        elevator.setHeight(currentHeight);
-        while (elevator.isBusy()) {
-            elevator.update();
-        }
-
-        curHeightToDisplay = elevator.getCurrentHeight();
-        telemetry.addData("Current  Height " + curHeightToDisplay,"");
-        telemetry.update();
     }
 }
